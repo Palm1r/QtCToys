@@ -1,5 +1,4 @@
 name: Build and Release
-
 on:
   push:
     branches:
@@ -9,7 +8,6 @@ on:
   pull_request:
     branches:
       - main
-
 jobs:
   build:
     name: Build for ${{ matrix.os }}
@@ -28,11 +26,10 @@ jobs:
             artifact_name: qtctoys-windows
             asset_name: qtctoys-windows.zip
             ext: .exe
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+        
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -53,29 +50,32 @@ jobs:
           }
         shell: pwsh
         if: matrix.os == 'windows-latest'
-
+        
+      - name: Download dependencies
+        run: go mod tidy
+        
       - name: Build
         run: |
           go build -v -o ${{ matrix.artifact_name }}${{ matrix.ext || '' }} .
         
       - name: Test
         run: go test -v ./...
-
+        
       - name: Create archive (Linux/Mac)
         if: matrix.os != 'windows-latest'
         run: tar -czvf ${{ matrix.asset_name }} ${{ matrix.artifact_name }}
-
+        
       - name: Create archive (Windows)
         if: matrix.os == 'windows-latest'
         run: |
           7z a -tzip ${{ matrix.asset_name }} ${{ matrix.artifact_name }}${{ matrix.ext }}
-
+          
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
           path: ${{ matrix.asset_name }}
-
+          
   release:
     name: Create Release
     needs: build
@@ -86,10 +86,10 @@ jobs:
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
         shell: bash
-
+        
       - name: Download all artifacts
         uses: actions/download-artifact@v4
-
+        
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
