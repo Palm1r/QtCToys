@@ -19,12 +19,15 @@ jobs:
           - os: ubuntu-latest
             artifact_name: qtctoys-linux
             asset_name: qtctoys-linux.tar.gz
+            binary_name: qtctoys
           - os: macos-latest
             artifact_name: qtctoys-mac
             asset_name: qtctoys-mac.tar.gz
+            binary_name: qtctoys
           - os: windows-latest
             artifact_name: qtctoys-windows
             asset_name: qtctoys-windows.zip
+            binary_name: qtctoys
             ext: .exe
     steps:
       - name: Checkout code
@@ -52,24 +55,21 @@ jobs:
         shell: pwsh
         if: matrix.os == 'windows-latest'
         
-      - name: Download dependencies
-        run: go mod tidy
-        
       - name: Build
         run: |
-          go build -v -o ${{ matrix.artifact_name }}${{ matrix.ext || '' }} .
+          go build -v -o ${{ matrix.binary_name }}${{ matrix.ext || '' }} .
         
       - name: Test
         run: go test -v ./...
         
       - name: Create archive (Linux/Mac)
         if: matrix.os != 'windows-latest'
-        run: tar -czvf ${{ matrix.asset_name }} ${{ matrix.artifact_name }}
+        run: tar -czvf ${{ matrix.asset_name }} ${{ matrix.binary_name }}
         
       - name: Create archive (Windows)
         if: matrix.os == 'windows-latest'
         run: |
-          7z a -tzip ${{ matrix.asset_name }} ${{ matrix.artifact_name }}${{ matrix.ext }}
+          7z a -tzip ${{ matrix.asset_name }} ${{ matrix.binary_name }}${{ matrix.ext }}
           
       - name: Upload artifact
         uses: actions/upload-artifact@v4
