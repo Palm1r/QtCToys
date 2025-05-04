@@ -8,9 +8,16 @@ import (
 	"strings"
 )
 
+type PluginInfo struct {
+	Name        string // Plugin name
+	Version     string // Plugin version
+	Description string // Plugin description
+}
+
 type Info struct {
-	Version string // Qt Creator version
-	Path    string // Path to the executable
+	Version string                // Qt Creator version
+	Path    string                // Path to the executable
+	Plugins map[string]PluginInfo // Available plugins
 }
 
 func GetInfo() (Info, error) {
@@ -45,6 +52,7 @@ func GetInfo() (Info, error) {
 	}
 
 	info.Path = creatorPath
+	info.Plugins = make(map[string]PluginInfo)
 
 	cmd := exec.Command(creatorPath, "-version")
 	output, err := cmd.CombinedOutput()
@@ -52,20 +60,100 @@ func GetInfo() (Info, error) {
 		return info, fmt.Errorf("error when requesting version: %w", err)
 	}
 
-	lines := strings.Split(string(output), "\n")
-	for _, line := range lines {
+	err = parseVersionOutput(string(output), &info)
+	if err != nil {
+		return info, fmt.Errorf("error parsing version output: %w", err)
+	}
+
+	return info, nil
+}
+
+func parseVersionOutput(output string, info *Info) error {
+	lines := strings.Split(output, "\n")
+
+	for i, line := range lines {
 		if strings.HasPrefix(line, "Qt Creator") {
 			parts := strings.SplitN(line, "Qt Creator", 2)
 			if len(parts) > 1 {
-				info.Version = strings.TrimSpace(parts[1])
+				versionParts := strings.Split(strings.TrimSpace(parts[1]), " ")
+				info.Version = versionParts[0]
 				break
 			}
+		}
+
+		if i > 5 {
+			break
 		}
 	}
 
 	if info.Version == "" {
-		return info, fmt.Errorf("could not determine Qt Creator version")
+		return fmt.Errorf("could not determine Qt Creator version")
 	}
 
-	return info, nil
+	// Process plugins
+	var currentPlugin string
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		parts := strings.SplitN(line, " ", 3)
+		if len(parts) >= 2 {
+			if isVersionFormat(parts[1]) {
+				currentPlugin = parts[0]
+				plugin := PluginInfo{
+					Name:    currentPlugin,
+					Version: parts[1],
+				}
+
+				if len(parts) >= 3 {
+					plugin.Description = strings.TrimSpace(parts[2])
+				}
+
+				info.Plugins[currentPlugin] = plugin
+			}
+		}
+	}
+
+	return nil
+}
+
+func isVersionFormat(s string) bool {
+	parts := strings.Split(s, ".")
+	if len(parts) < 2 {
+		return false
+	}
+
+	for _, part := range parts {
+		if !isNumeric(part) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func isNumeric(s string) bool {
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return len(s) > 0
+}
+
+func GetPluginInfo(name string) (PluginInfo, error) {
+	info, err := GetInfo()
+	if err != nil {
+		return PluginInfo{}, err
+	}
+
+	plugin, exists := info.Plugins[name]
+	if !exists {
+		return PluginInfo{}, fmt.Errorf("plugin '%s' not found", name)
+	}
+
+	return plugin, nil
 }
