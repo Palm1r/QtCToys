@@ -71,7 +71,7 @@ func main() {
 	}
 }
 
-func handlePlugins(info qtcreator.Info, pluginName string, showAllPlugins bool) {
+func handlePlugins(info qtcreator.QtCreatorInfo, pluginName string, showAllPlugins bool) {
 	var pluginNames []string
 	for name := range info.Plugins {
 		pluginNames = append(pluginNames, name)

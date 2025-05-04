@@ -14,14 +14,14 @@ type PluginInfo struct {
 	Description string // Plugin description
 }
 
-type Info struct {
+type QtCreatorInfo struct {
 	Version string                // Qt Creator version
 	Path    string                // Path to the executable
 	Plugins map[string]PluginInfo // Available plugins
 }
 
-func GetInfo() (Info, error) {
-	var info Info
+func GetInfo() (QtCreatorInfo, error) {
+	var info QtCreatorInfo
 	var creatorPath string
 	var err error
 
@@ -68,7 +68,7 @@ func GetInfo() (Info, error) {
 	return info, nil
 }
 
-func parseVersionOutput(output string, info *Info) error {
+func parseVersionOutput(output string, info *QtCreatorInfo) error {
 	lines := strings.Split(output, "\n")
 
 	for i, line := range lines {
